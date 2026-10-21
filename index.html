@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coinbase Pro | Next-Gen Crypto & Asset Exchange</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cbBlue: '#0052ff',
+            cbBlueHover: '#0045d8',
+            cbDarkBg: '#0a0d14',
+            cbCardBg: '#121621',
+            cbBorder: '#1e2535',
+            cbGreen: '#00c087',
+            cbRed: '#f6465d'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .glass-card {
+      background: rgba(18, 22, 33, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    @keyframes pulseScan {
+      0%, 100% { top: 0%; }
+      50% { top: 90%; }
+    }
+    .scan-line {
+      animation: pulseScan 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-cbDarkBg text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cbBlue selection:text-white">
+
+  <!-- TOP TICKER BAR -->
+  <div class="bg-[#07090e] border-b border-cbBorder text-xs py-2 px-4 overflow-x-auto whitespace-nowrap">
+    <div class="max-w-7xl mx-auto flex justify-between items-center gap-6">
+      <div class="flex items-center gap-6" id="cryptoTickerContainer"></div>
+      <div class="flex items-center gap-3">
+        <span class="text-slate-400">Currency:</span>
+        <select id="userCurrencySelect" onchange="changeCurrency(this.value)" class="bg-cbCardBg border border-cbBorder text-xs px-2 py-1 rounded text-slate-200 focus:outline-none">
+          <option value="USD" selected>USD ($)</option>
+          <option value="NGN">NGN (₦)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="GHS">GHS (GH₵)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER NAVIGATION -->
+  <header class="bg-cbCardBg/90 backdrop-blur-md border-b border-cbBorder sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex justify-between items-center">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchMainTab('markets')">
+        <div class="bg-cbBlue p-2 rounded-xl text-white font-black text-xl tracking-wider">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <span class="font-black text-xl tracking-tight text-white">coinbase <span class="text-cbBlue font-mono text-sm px-1.5 py-0.5 rounded bg-cbBlue/10 border border-cbBlue/30">PRO</span></span>
+      </div>
+
+      <div id="navRightSection" class="flex items-center gap-3 text-xs sm:text-sm font-semibold">
+        <button onclick="openAuthModal('signin')" class="text-slate-300 hover:text-white px-3 py-1.5">Sign In</button>
+        <button onclick="openAuthModal('signup')" class="bg-cbBlue hover:bg-cbBlueHover text-white px-4 py-2 rounded-lg transition font-bold shadow-lg shadow-cbBlue/20">Get Started</button>
+        <button onclick="openAdminModal()" class="border border-cbBorder hover:border-slate-500 text-slate-400 hover:text-white px-3 py-1.5 rounded-lg text-xs transition">Admin Portal 🔒</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN DASHBOARD CONTENT -->
+  <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+    <div id="userDashContainer" class="space-y-6">
+
+      <!-- TOP METRICS BANNER -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- MAIN PORTFOLIO CARD -->
+        <div class="lg:col-span-2 glass-card p-6 rounded-2xl relative overflow-hidden flex flex-col justify-between">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-xs uppercase font-bold tracking-wider text-slate-400 block mb-1">Total Balance</span>
+              <h2 id="dispUserBalance" class="text-3xl sm:text-4xl font-black font-mono text-white">$0.00</h2>
+              <span id="dispUserSubBal" class="text-xs text-slate-400 mt-1 block font-mono">≈ 0.00000000 BTC</span>
+            </div>
+            <div class="flex gap-2">
+              <span id="kycBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-cbBorder flex items-center gap-1 cursor-pointer" onclick="openKYCModal()">
+                <i class="fa-solid fa-lock"></i> KYC Unverified — Sign In First
+              </span>
+            </div>
+          </div>
+
+          <!-- RESTORED ACTION BUTTONS -->
+          <div class="grid grid-cols-3 gap-3 mt-6">
+            <button onclick="openDepositModal()" class="bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-3 rounded-xl transition text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-cbBlue/20">
+              <i class="fa-solid fa-arrow-down-left"></i> Deposit
+            </button>
+            <button onclick="openReceiveModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-xl border border-cbBorder transition text-xs sm:text-sm flex items-center justify-center gap-2">
+              <i class="fa-solid fa-qrcode"></i> Receive
+            </button>
+            <button onclick="initiateWithdrawalProcess()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20">
+              <i class="fa-solid fa-arrow-up-right"></i> Withdraw
+            </button>
+          </div>
+        </div>
+
+        <!-- QUICK CONVERTER WIDGET -->
+        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between">
+          <h3 class="font-bold text-sm text-white flex items-center gap-2"><i class="fa-solid fa-rotate text-cbBlue"></i> Instant Swap / Buy</h3>
+          <div class="space-y-3 text-xs my-2">
+            <div class="bg-cbDarkBg p-3 rounded-xl border border-cbBorder flex justify-between items-center">
+              <div>
+                <span class="text-slate-500 text-[10px] block">Pay With</span>
+                <input type="number" value="100" id="swapPayAmt" oninput="calcSwap()" class="bg-transparent text-sm font-mono font-bold text-white outline-none w-24">
+              </div>
+              <span class="font-bold text-slate-300">USD</span>
+            </div>
+            <div class="bg-cbDarkBg p-3 rounded-xl border border-cbBorder flex justify-between items-center">
+              <div>
+                <span class="text-slate-500 text-[10px] block">You Receive</span>
+                <span id="swapRecVal" class="text-sm font-mono font-bold text-cbGreen">0.00121</span>
+              </div>
+              <select id="swapAssetSel" onchange="calcSwap()" class="bg-cbCardBg border border-cbBorder text-xs px-2 py-1 rounded font-bold text-white">
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+                <option value="USDT">USDT</option>
+                <option value="SOL">SOL</option>
+              </select>
+            </div>
+          </div>
+          <button onclick="executeSwap()" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-2.5 rounded-xl text-xs transition">Execute Instant Order</button>
+        </div>
+      </div>
+
+      <!-- MAIN TABS CONTROL -->
+      <div class="flex gap-4 border-b border-cbBorder text-xs sm:text-sm font-bold">
+        <button id="tabBtnMarkets" onclick="switchMainTab('markets')" class="pb-3 text-cbBlue border-b-2 border-cbBlue">Live Markets & Trade</button>
+        <button id="tabBtnInvest" onclick="switchMainTab('invest')" class="pb-3 text-slate-400 hover:text-white">High-Yield Investment Slots 🚀</button>
+        <button id="tabBtnHistory" onclick="switchMainTab('history')" class="pb-3 text-slate-400 hover:text-white">Transaction Logs</button>
+      </div>
+
+      <!-- TAB 1: MARKETS & CHARTS -->
+      <div id="tabContentMarkets" class="space-y-6">
+        <div class="glass-card p-6 rounded-2xl space-y-4">
+          <div class="flex justify-between items-center">
+            <h3 class="font-bold text-white text-sm sm:text-base flex items-center gap-2"><i class="fa-solid fa-chart-line text-cbBlue"></i> BTC/USD Real-Time Market Overview</h3>
+            <span class="text-xs text-cbGreen font-mono font-bold">+2.45% 24h</span>
+          </div>
+          <div class="h-64 sm:h-72 w-full">
+            <canvas id="marketChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: INVESTMENT SLOTS -->
+      <div id="tabContentInvest" class="hidden space-y-4">
+        <div class="flex justify-between items-center">
+          <div>
+            <h2 class="text-lg font-bold text-white">Guaranteed Yield Investment Slots</h2>
+            <p class="text-xs text-slate-400">Lock your capital into audited institutional liquidity pools.</p>
+          </div>
+        </div>
+        <div id="investmentSlotsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div>
+
+      <!-- TAB 3: TRANSACTION HISTORY -->
+      <div id="tabContentHistory" class="hidden glass-card p-6 rounded-2xl space-y-4">
+        <h3 class="font-bold text-sm text-white">Account Activity & Ledger</h3>
+        <div id="txHistoryContainer" class="space-y-3 text-xs">
+          <p class="text-slate-400">No recent transactions recorded.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 relative text-xs">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="text-center space-y-1">
+        <div class="inline-block bg-cbBlue text-white p-3 rounded-2xl mb-1"><i class="fa-solid fa-shield-halved text-2xl"></i></div>
+        <h3 id="authTitle" class="text-lg font-black text-white">Create Your Coinbase Account</h3>
+        <p id="authSub" class="text-slate-400">Join millions of traders worldwide.</p>
+      </div>
+
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
+        <div id="nameField">
+          <label class="font-bold text-slate-300 block mb-1">Full Legal Name</label>
+          <input type="text" id="regName" placeholder="e.g. Alex Morgan" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none focus:border-cbBlue">
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-300 block mb-1">Email Address</label>
+          <input type="email" id="authEmail" required placeholder="name@domain.com" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none focus:border-cbBlue">
+        </div>
+
+        <div id="countryField">
+          <label class="font-bold text-slate-300 block mb-1">Country of Residence</label>
+          <select id="regCountry" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none focus:border-cbBlue">
+            <option value="United States">United States ($)</option>
+            <option value="Nigeria">Nigeria (₦)</option>
+            <option value="United Kingdom">United Kingdom (£)</option>
+            <option value="Ghana">Ghana (GH₵)</option>
+            <option value="Germany">Germany (€)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="font-bold text-slate-300 block mb-1">Password</label>
+          <input type="password" id="authPass" required placeholder="••••••••" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none focus:border-cbBlue">
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-3 rounded-xl transition text-xs shadow-lg shadow-cbBlue/20 mt-2">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SEQUENTIAL KYC MODAL -->
+  <div id="kycModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 relative text-xs text-center">
+      
+      <!-- STEP 1: LIVENESS SCAN -->
+      <div id="kycStep1" class="space-y-4">
+        <div class="inline-block bg-cbBlue/10 text-cbBlue p-3 rounded-full border border-cbBlue/30">
+          <i class="fa-solid fa-face-smile text-2xl"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold text-cbBlue uppercase tracking-widest block">Step 1 of 2</span>
+          <h3 class="text-base font-black text-white">Automated Liveness Verification</h3>
+          <p class="text-slate-400 mt-0.5">Follow the live instructions in the camera frame below.</p>
+        </div>
+
+        <div class="relative w-48 h-48 mx-auto bg-slate-900 rounded-full border-4 border-cbBlue overflow-hidden flex items-center justify-center">
+          <i class="fa-solid fa-user text-6xl text-slate-700"></i>
+          <div class="scan-line absolute left-0 right-0 h-1 bg-cbBlue/80 shadow-[0_0_15px_#0052ff]"></div>
+        </div>
+
+        <div class="bg-cbDarkBg p-3 rounded-xl border border-cbBorder">
+          <p id="livenessPrompt" class="font-bold text-cbGreen text-xs animate-pulse">Initializing camera stream...</p>
+        </div>
+
+        <button id="startLivenessBtn" onclick="runLivenessSimulation()" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-3 rounded-xl transition">Start Facial Scan</button>
+      </div>
+
+      <!-- STEP 2: ID UPLOAD -->
+      <div id="kycStep2" class="hidden space-y-4">
+        <div class="inline-block bg-emerald-500/10 text-emerald-400 p-3 rounded-full border border-emerald-500/30">
+          <i class="fa-solid fa-id-card text-2xl"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block">Step 2 of 2</span>
+          <h3 class="text-base font-black text-white">Government ID Document</h3>
+          <p class="text-slate-400 mt-0.5">Upload a clean photo of your Passport or Driver's License.</p>
+        </div>
+
+        <div class="space-y-3 text-left">
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Document Type</label>
+            <select id="idDocType" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white outline-none">
+              <option value="National Passport">National Passport</option>
+              <option value="Driver License">Driver's License</option>
+              <option value="Government Identity Card">Government Identity Card</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Document Photo / Image Proof</label>
+            <input type="file" id="idImgInput" accept="image/*" onchange="previewKycDoc(event)" class="w-full text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cbBlue file:text-white hover:file:bg-cbBlueHover">
+          </div>
+
+          <div id="kycDocPreviewContainer" class="hidden border border-cbBorder rounded-xl p-2 bg-cbDarkBg text-center">
+            <img id="kycDocImg" class="max-h-32 mx-auto rounded border border-cbBorder" alt="Doc Preview">
+          </div>
+        </div>
+
+        <button onclick="submitFinalKYC()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">Submit ID for Admin Review</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- RECEIVE ASSETS MODAL -->
+  <div id="receiveModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 space-y-4 relative text-xs">
+      <button onclick="closeReceiveModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="text-center space-y-1">
+        <h3 class="text-base font-black text-white">Receive Digital Assets</h3>
+        <p class="text-slate-400">Select asset to display your personal assigned deposit address.</p>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold text-slate-300 block mb-1">Select Asset</label>
+          <select id="recAssetSelect" onchange="updateReceiveAddressDisplay()" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white font-bold outline-none">
+            <option value="BTC">Bitcoin (BTC)</option>
+            <option value="ETH">Ethereum (ETH)</option>
+            <option value="USDT">Tether USD (USDT TRC20)</option>
+            <option value="SOL">Solana (SOL)</option>
+          </select>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl text-center flex flex-col items-center justify-center">
+          <img id="recQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh" class="w-36 h-36 rounded border" alt="QR Code">
+        </div>
+
+        <div class="bg-cbDarkBg p-3 rounded-xl border border-cbBorder space-y-1">
+          <span class="text-[10px] text-slate-400 font-bold block uppercase">Your Unique Assigned Deposit Address</span>
+          <div class="flex justify-between items-center gap-2">
+            <span id="recWalletAddrDisp" class="font-mono text-slate-200 text-[11px] truncate">bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh</span>
+            <button onclick="copyWalletAddr()" class="bg-cbBlue text-white text-[10px] font-bold px-2.5 py-1 rounded-lg hover:bg-cbBlueHover">Copy</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPOSIT MODAL -->
+  <div id="depositModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 relative text-xs">
+      <button onclick="closeDepositModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+
+      <h3 class="text-base font-black text-white flex items-center gap-2"><i class="fa-solid fa-wallet text-cbBlue"></i> Deposit Capital</h3>
+
+      <div class="space-y-3">
+        <div>
+          <label class="font-bold text-slate-300 block mb-1">Deposit Method</label>
+          <select id="depMethodSelect" onchange="toggleDepMethodView()" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white outline-none">
+            <option value="crypto">Cryptocurrency Transfer</option>
+            <option value="giftcard">Gift Card Voucher Submission</option>
+            <option value="paymentlink">Debit / Credit Card Payment Link</option>
+          </select>
+        </div>
+
+        <!-- CRYPTO VIEW -->
+        <div id="depCryptoView" class="space-y-2">
+          <p class="text-slate-400">Transfer funds directly to your wallet using the Receive modal QR code or address.</p>
+          <button onclick="closeDepositModal(); openReceiveModal();" class="w-full bg-cbBlue text-white font-bold py-2.5 rounded-xl">View Crypto Wallet Addresses</button>
+        </div>
+
+        <!-- GIFT CARD VIEW -->
+        <div id="depGiftCardView" class="hidden space-y-2">
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Gift Card Brand & Amount ($ USD)</label>
+            <input type="text" id="gcDetails" placeholder="e.g. Apple Gift Card - $200" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white outline-none">
+          </div>
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Upload Receipt / Card Photo Screenshot</label>
+            <input type="file" id="gcProofInput" accept="image/*" class="w-full text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cbBlue file:text-white">
+          </div>
+          <button onclick="submitGiftCardDeposit()" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-xl">Submit Voucher Proof</button>
+        </div>
+
+        <!-- PAYMENT LINK VIEW -->
+        <div id="depLinkView" class="hidden space-y-2">
+          <p class="text-slate-400">Click below to proceed to our official secure checkout gateway.</p>
+          <a href="https://paystack.com" target="_blank" class="block text-center w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-3 rounded-xl">Proceed to Card Gateway 🔒</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WITHDRAWAL FORM & ACTION MODAL -->
+  <div id="withdrawalModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 relative text-xs">
+      <button onclick="closeWithdrawalModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+
+      <!-- VIEW 1: WITHDRAWAL INPUT REQUEST FORM -->
+      <div id="wdInputFormBox" class="space-y-4">
+        <h3 class="text-base font-black text-white flex items-center gap-2"><i class="fa-solid fa-arrow-up-right text-emerald-400"></i> Initiate Crypto Withdrawal</h3>
+        <p class="text-slate-400">Enter your destination payout address and amount.</p>
+
+        <div class="space-y-3">
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Withdrawal Asset</label>
+            <select id="wdAssetSelect" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white outline-none font-bold">
+              <option value="BTC">Bitcoin (BTC)</option>
+              <option value="USDT">Tether USD (USDT TRC20)</option>
+              <option value="ETH">Ethereum (ETH)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Destination Wallet Address</label>
+            <input type="text" id="wdDestAddr" placeholder="Paste target wallet address" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white font-mono outline-none">
+          </div>
+
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Amount ($ USD)</label>
+            <input type="number" id="wdAmtInput" placeholder="Enter USD Amount" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white font-mono outline-none">
+          </div>
+
+          <button onclick="submitWithdrawalRequest()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">Submit Withdrawal Request</button>
+        </div>
+      </div>
+
+      <!-- VIEW 2: ROLLING SPINNER -->
+      <div id="wdLoadingSpinner" class="hidden text-center py-8 space-y-3">
+        <div class="inline-block w-12 h-12 border-4 border-cbBlue border-t-transparent rounded-full animate-spin"></div>
+        <h4 class="font-bold text-white text-sm">Checking Withdrawal Clearing Requirements...</h4>
+        <p class="text-slate-400 text-[11px]">Connecting to banking liquidity hub and verifying clearance holds...</p>
+      </div>
+
+      <!-- VIEW 3: ACTION REQUIREMENT HOLD VIEW -->
+      <div id="wdStageActionBox" class="hidden space-y-4">
+        <div class="flex items-center justify-between border-b border-cbBorder pb-3">
+          <span class="text-[10px] font-bold uppercase tracking-widest text-cbBlue" id="wdStepBadge">Action Step Required</span>
+          <span class="text-xs font-mono font-bold text-amber-400">Status: Hold Pending</span>
+        </div>
+
+        <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-2">
+          <h4 id="wdActionTitle" class="font-bold text-white text-sm">Customs Import Clearance Duty</h4>
+          <p class="text-slate-400 leading-relaxed text-[11px]">A mandatory compliance fee must be settled to release your withdrawal payout.</p>
+          <div class="bg-cbCardBg p-2.5 rounded-lg border border-cbBorder flex justify-between items-center mt-2">
+            <span class="text-slate-400 font-bold">Required Fee:</span>
+            <span id="wdActionFeeDisp" class="font-mono font-black text-amber-400 text-sm">$150.00 USD</span>
+          </div>
+        </div>
+
+        <!-- PAYMENT METHOD INSTRUCTIONS -->
+        <div class="bg-cbDarkBg p-3 rounded-xl border border-cbBorder space-y-2">
+          <span class="font-bold text-white uppercase text-[10px] block">Payment Destination Channels</span>
+          <div id="wdPayChannelDetails" class="space-y-1 font-mono text-[11px] text-slate-300"></div>
+        </div>
+
+        <!-- SCREENSHOT PROOF SUBMISSION FORM -->
+        <div class="space-y-2 border-t border-cbBorder pt-3">
+          <span class="font-bold text-white uppercase text-[10px] block">Submit Requirement Proof / Receipt</span>
+          <input type="text" id="wdProofNotes" placeholder="Transaction Hash / Payment Ref Notes" class="w-full bg-cbDarkBg border border-cbBorder p-2.5 rounded-xl text-white outline-none">
+          
+          <div>
+            <label class="font-bold text-slate-300 block mb-1">Upload Receipt Screenshot</label>
+            <input type="file" id="wdScreenshotInput" accept="image/*" onchange="previewWdScreenshot(event)" class="w-full text-slate-400 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cbBlue file:text-white">
+          </div>
+
+          <div id="wdScreenshotPreviewBox" class="hidden border border-cbBorder rounded-xl p-2 bg-cbDarkBg text-center">
+            <img id="wdScreenshotImg" class="max-h-32 mx-auto rounded border border-cbBorder" alt="Proof Preview">
+          </div>
+
+          <button onclick="submitWithdrawalStepProof()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-emerald-600/20">Submit Step Proof for Admin Clearance</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADMIN MANAGEMENT MODAL -->
+  <div id="adminModal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-4xl w-full p-6 space-y-6 relative text-xs max-h-[90vh] overflow-y-auto">
+      <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+
+      <!-- ADMIN LOGIN FORM -->
+      <div id="adminLoginForm" class="max-w-sm mx-auto space-y-4 py-6 text-center">
+        <div class="inline-block bg-cbBlue text-white p-3 rounded-full mb-1"><i class="fa-solid fa-lock text-2xl"></i></div>
+        <h3 class="text-lg font-black text-white">Coinbase Pro Admin Master Portal</h3>
+        <p class="text-slate-400">Enter master administrative passkey to continue.</p>
+
+        <div class="space-y-2 text-left">
+          <input type="text" id="admUsername" placeholder="Admin Username" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none">
+          <input type="password" id="admPasscode" placeholder="Passcode" class="w-full bg-cbDarkBg border border-cbBorder p-3 rounded-xl text-white outline-none">
+          <button onclick="processAdminLogin()" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-3 rounded-xl shadow-lg shadow-cbBlue/20">Authenticate Portal</button>
+        </div>
+      </div>
+
+      <!-- ADMIN CONTROL DASHBOARD -->
+      <div id="adminDashboard" class="hidden space-y-6">
+        <div class="flex justify-between items-center border-b border-cbBorder pb-4">
+          <div>
+            <h2 class="text-lg font-black text-white"><i class="fa-solid fa-sliders text-cbBlue"></i> System Administration Panel</h2>
+            <p class="text-slate-400">Manage KYC, bulk wallet pools, user balances, and action stages.</p>
+          </div>
+          <button onclick="adminLogout()" class="bg-red-500/10 text-red-400 border border-red-500/20 font-bold px-3 py-1.5 rounded-lg hover:bg-red-500/20">Logout</button>
+        </div>
+
+        <!-- BULK WALLET ADDRESS POOL UPLOADER -->
+        <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-3">
+          <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-boxes-stacked text-cbBlue"></i> Bulk Master Wallet Address Pool Setup</h3>
+          <p class="text-slate-400 text-[11px]">Paste wallet addresses (one address per line). The system will automatically assign the next available address to newly registered users and mark it as USED.</p>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="font-bold text-slate-300 block mb-1">BTC Address Pool</label>
+              <textarea id="admPoolBtc" rows="4" placeholder="Paste BTC addresses..." class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white font-mono text-[10px] outline-none"></textarea>
+            </div>
+            <div>
+              <label class="font-bold text-slate-300 block mb-1">ETH Address Pool</label>
+              <textarea id="admPoolEth" rows="4" placeholder="Paste ETH addresses..." class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white font-mono text-[10px] outline-none"></textarea>
+            </div>
+            <div>
+              <label class="font-bold text-slate-300 block mb-1">USDT (TRC20) Pool</label>
+              <textarea id="admPoolUsdt" rows="4" placeholder="Paste USDT addresses..." class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white font-mono text-[10px] outline-none"></textarea>
+            </div>
+          </div>
+          <button onclick="saveWalletPools()" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-2 rounded-xl">Save & Update Master Wallet Pools</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- 1. USER BALANCE & WITHDRAWAL STAGE CONTROL -->
+          <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-3">
+            <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-user-gear text-cbBlue"></i> User Balance & Withdrawal Control</h3>
+            
+            <select id="admUserSelect" onchange="loadAdmUserData()" class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white">
+              <option value="">Select Target Registered User...</option>
+            </select>
+
+            <!-- EDIT BALANCE -->
+            <div class="space-y-2 bg-cbCardBg p-3 rounded-xl border border-cbBorder">
+              <label class="font-bold text-white block text-[10px] uppercase">Edit User Balance ($ USD)</label>
+              <div class="flex gap-2">
+                <input type="number" id="admUserBalInput" placeholder="USD Balance" class="flex-1 bg-cbDarkBg border border-cbBorder p-2 rounded-xl text-white font-mono">
+                <button onclick="saveAdmUserBal()" class="bg-cbBlue hover:bg-cbBlueHover text-white font-bold px-4 rounded-xl">Save Balance</button>
+              </div>
+            </div>
+
+            <!-- EDIT CUSTOM WITHDRAWAL ACTION -->
+            <div class="space-y-2 bg-cbCardBg p-3 rounded-xl border border-cbBorder">
+              <label class="font-bold text-white block text-[10px] uppercase">Set Withdrawal Step Action & Amount</label>
+              
+              <div>
+                <span class="text-[10px] text-slate-400">Action Title Name:</span>
+                <input type="text" id="admWdTitleInput" placeholder="e.g. Customs Import Clearance Duty" class="w-full bg-cbDarkBg border border-cbBorder p-2 rounded-xl text-white text-xs mt-1">
+              </div>
+
+              <div>
+                <span class="text-[10px] text-slate-400">Required Amount ($ USD):</span>
+                <input type="number" id="admWdFeeInput" placeholder="e.g. 150" class="w-full bg-cbDarkBg border border-cbBorder p-2 rounded-xl text-white font-mono text-xs mt-1">
+              </div>
+
+              <button onclick="saveAdmUserStageAction()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl mt-1">Update User Action Requirement</button>
+            </div>
+          </div>
+
+          <!-- 2. INVESTMENT SLOTS MANAGER -->
+          <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-3">
+            <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-chart-pie text-cbGreen"></i> Investment Slots Manager</h3>
+            <div class="space-y-2">
+              <input type="text" id="admSlotTitle" placeholder="Slot Plan Title (e.g. Bitcoin Starter)" class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white">
+              <div class="grid grid-cols-2 gap-2">
+                <input type="number" id="admSlotDeposit" placeholder="Deposit Amount ($ USD)" class="bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white font-mono">
+                <input type="number" id="admSlotReturn" placeholder="Return Amount ($ USD)" class="bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white font-mono">
+              </div>
+              <input type="text" id="admSlotDuration" placeholder="Duration (e.g. 24 Hours / 7 Days)" class="w-full bg-cbCardBg border border-cbBorder p-2 rounded-xl text-white">
+              <button onclick="addInvestmentSlot()" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-2 rounded-xl">+ Create Investment Slot</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 3. KYC APPROVAL QUEUE -->
+        <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-3">
+          <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-id-card text-amber-400"></i> KYC ID Verification Approval Queue</h3>
+          <div id="admKycQueue" class="space-y-3 text-slate-400">
+            <p>No KYC document verification requests pending.</p>
+          </div>
+        </div>
+
+        <!-- 4. WITHDRAWAL SCREENSHOTS QUEUE -->
+        <div class="bg-cbDarkBg p-4 rounded-xl border border-cbBorder space-y-3">
+          <h3 class="font-bold text-white flex items-center gap-2"><i class="fa-solid fa-receipt text-cbGreen"></i> Withdrawal Step Proof Screenshot Queue</h3>
+          <div id="admWdQueue" class="space-y-3 text-slate-400">
+            <p>No withdrawal step screenshots pending verification.</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- APPLICATION LOGIC SCRIPT -->
+  <script>
+    const ADMIN_USER = "Admin";
+    const ADMIN_PASS = "Femifresh12345";
+
+    let currencyRates = { USD: 1, NGN: 1550, GBP: 0.78, EUR: 0.92, GHS: 15.2 };
+    let currencySymbols = { USD: "$", NGN: "₦", GBP: "£", EUR: "€", GHS: "GH₵" };
+    let activeCurrency = "USD";
+
+    let defaultWalletPools = {
+      BTC: [
+        { addr: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", used: true },
+        { addr: "bc1q9v837593h45793h45793h45793h45793h45793", used: false },
+        { addr: "bc1q48239048203948230948230948230948230948", used: false }
+      ],
+      ETH: [
+        { addr: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F", used: true },
+        { addr: "0x2839475893475893475893475893475893475893", used: false }
+      ],
+      USDT: [
+        { addr: "TYDzs2ZF938475hnx89347598347593847", used: true },
+        { addr: "TYPzs89347589347589347589347589348", used: false }
+      ]
+    };
+
+    let walletPools = JSON.parse(localStorage.getItem('cb_pro_pools')) || defaultWalletPools;
+
+    let defaultSlots = [
+      { id: 1, title: "Starter Liquidity Pool", deposit: 200, returnAmt: 500, duration: "24 Hours" },
+      { id: 2, title: "Pro Arbitrage Yield", deposit: 1000, returnAmt: 2800, duration: "3 Days" },
+      { id: 3, title: "Institutional Staking", deposit: 5000, returnAmt: 15000, duration: "7 Days" }
+    ];
+
+    let defaultUsers = {
+      "demo@coinbase.com": {
+        name: "Demo Investor",
+        email: "demo@coinbase.com",
+        country: "United States",
+        pass: "123456",
+        balanceUSD: 2500,
+        kycStatus: "approved",
+        kycDocType: "National Passport",
+        kycDocImg: null,
+        wdStageIndex: 0,
+        wdActionTitle: "Customs Import Clearance Duty",
+        wdActionFeeUSD: 150,
+        wdHasActiveRequest: false,
+        wdProofSubmitted: false,
+        txHistory: [],
+        wallets: {
+          BTC: "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+          ETH: "0x71C7656EC7ab88b098defB751B7401B5f6d8976F",
+          USDT: "TYDzs2ZF938475hnx89347598347593847",
+          SOL: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R"
+        }
+      }
+    };
+
+    let users = JSON.parse(localStorage.getItem('cb_pro_users')) || defaultUsers;
+    let investmentSlots = JSON.parse(localStorage.getItem('cb_pro_slots')) || defaultSlots;
+    let currentUserEmail = localStorage.getItem('cb_pro_active_user') || null;
+    let activeWdScreenshot = null;
+
+    window.addEventListener('load', () => {
+      renderCryptoTickers();
+      initChart();
+      renderInvestmentSlots();
+      if (currentUserEmail && users[currentUserEmail]) {
+        updateUserDashboardUI();
+      }
+    });
+
+    function saveData() {
+      localStorage.setItem('cb_pro_users', JSON.stringify(users));
+      localStorage.setItem('cb_pro_slots', JSON.stringify(investmentSlots));
+      localStorage.setItem('cb_pro_pools', JSON.stringify(walletPools));
+      renderInvestmentSlots();
+      if (currentUserEmail) updateUserDashboardUI();
+    }
+
+    function renderCryptoTickers() {
+      const container = document.getElementById('cryptoTickerContainer');
+      const coins = [
+        { name: "BTC/USD", price: "$82,739.10", change: "+2.45%", color: "text-cbGreen" },
+        { name: "ETH/USD", price: "$2,440.80", change: "+1.80%", color: "text-cbGreen" },
+        { name: "SOL/USD", price: "$106.25", change: "-0.40%", color: "text-cbRed" },
+        { name: "USDT/USD", price: "$1.00", change: "+0.01%", color: "text-cbGreen" }
+      ];
+      container.innerHTML = coins.map(c => `
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-slate-300">${c.name}:</span>
+          <span class="font-mono font-bold text-white">${c.price}</span>
+          <span class="font-mono text-[10px] font-bold ${c.color}">${c.change}</span>
+        </div>
+      `).join('');
+    }
+
+    function changeCurrency(curr) {
+      activeCurrency = curr;
+      updateUserDashboardUI();
+    }
+
+    function switchMainTab(tabName) {
+      ['markets', 'invest', 'history'].forEach(t => {
+        const btn = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        const content = document.getElementById('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (btn && content) {
+          btn.className = "pb-3 text-slate-400 hover:text-white";
+          content.classList.add('hidden');
+        }
+      });
+
+      const activeBtn = document.getElementById('tabBtn' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+      const activeContent = document.getElementById('tabContent' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+      if (activeBtn && activeContent) {
+        activeBtn.className = "pb-3 text-cbBlue border-b-2 border-cbBlue";
+        activeContent.classList.remove('hidden');
+      }
+    }
+
+    function getNextUnusedAddress(asset) {
+      const pool = walletPools[asset] || [];
+      const item = pool.find(i => !i.used);
+      if (item) {
+        item.used = true;
+        return item.addr;
+      }
+      return asset === 'BTC' ? "bc1q" + Math.random().toString(36).substring(2, 14) : "0x" + Math.random().toString(36).substring(2, 14);
+    }
+
+    function updateUserDashboardUI() {
+      if (!currentUserEmail || !users[currentUserEmail]) {
+        document.getElementById('kycBadge').className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-cbBorder flex items-center gap-1 cursor-pointer";
+        document.getElementById('kycBadge').innerHTML = '<i class="fa-solid fa-lock"></i> KYC Unverified — Sign In First';
+        document.getElementById('kycBadge').onclick = () => openAuthModal('signin');
+        return;
+      }
+
+      const u = users[currentUserEmail];
+
+      document.getElementById('navRightSection').innerHTML = `
+        <span class="text-slate-300 font-bold"><i class="fa-solid fa-user text-cbBlue"></i> ${u.name}</span>
+        <button onclick="userLogout()" class="border border-cbBorder hover:border-slate-500 text-slate-400 px-3 py-1 rounded-lg text-xs">Logout</button>
+        <button onclick="openAdminModal()" class="border border-cbBorder hover:border-slate-500 text-slate-400 px-3 py-1 rounded-lg text-xs">Admin 🔒</button>
+      `;
+
+      const rate = currencyRates[activeCurrency] || 1;
+      const sym = currencySymbols[activeCurrency] || "$";
+      const convertedBal = (u.balanceUSD * rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      
+      document.getElementById('dispUserBalance').innerText = `${sym}${convertedBal}`;
+      document.getElementById('dispUserSubBal').innerText = `≈ ${(u.balanceUSD / 82739.1).toFixed(6)} BTC`;
+
+      const badge = document.getElementById('kycBadge');
+      if (u.kycStatus === 'approved') {
+        badge.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1";
+        badge.innerHTML = '<i class="fa-solid fa-circle-check"></i> KYC Verified';
+        badge.onclick = null;
+      } else if (u.kycStatus === 'pending') {
+        badge.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1";
+        badge.innerHTML = '<i class="fa-solid fa-clock"></i> Verification Pending Review';
+        badge.onclick = null;
+      } else {
+        badge.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 flex items-center gap-1 cursor-pointer";
+        badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Complete KYC Verification';
+        badge.onclick = openKYCModal;
+      }
+
+      renderTxHistory(u);
+      renderInvestmentSlots();
+    }
+
+    function renderTxHistory(u) {
+      const container = document.getElementById('txHistoryContainer');
+      if (!container) return;
+
+      if (!u.txHistory || u.txHistory.length === 0) {
+        container.innerHTML = '<p class="text-slate-400">No recent transactions recorded.</p>';
+        return;
+      }
+
+      container.innerHTML = u.txHistory.map(t => `
+        <div class="bg-cbDarkBg p-3.5 rounded-xl border border-cbBorder flex justify-between items-center">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white">${t.type} (${t.asset})</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${t.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">${t.status}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1 font-mono">Target: ${t.addr}</p>
+            <p class="text-[10px] text-slate-500">${t.date}</p>
+          </div>
+          <div class="text-right space-y-1">
+            <span class="font-mono font-bold text-amber-400 text-sm">-$${t.amt.toFixed(2)} USD</span>
+            ${t.status !== 'Completed' ? `<button onclick="initiateWithdrawalProcess()" class="block text-[10px] bg-cbBlue hover:bg-cbBlueHover text-white px-2.5 py-1 rounded-lg font-bold">View / Settle Action Step</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderInvestmentSlots() {
+      const container = document.getElementById('investmentSlotsGrid');
+      if (!container) return;
+      
+      const rate = currencyRates[activeCurrency] || 1;
+      const sym = currencySymbols[activeCurrency] || "$";
+
+      container.innerHTML = investmentSlots.map(s => {
+        const dep = (s.deposit * rate).toLocaleString();
+        const ret = (s.returnAmt * rate).toLocaleString();
+        return `
+          <div class="glass-card p-5 rounded-2xl space-y-4 border border-cbBorder flex flex-col justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-cbBlue uppercase tracking-widest block">${s.duration} Pool</span>
+              <h3 class="font-bold text-white text-base mt-1">${s.title}</h3>
+              <div class="mt-4 space-y-1">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Required Stake:</span>
+                  <span class="font-mono font-bold text-white">${sym}${dep}</span>
+                </div>
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-400">Guaranteed Return:</span>
+                  <span class="font-mono font-bold text-cbGreen">${sym}${ret}</span>
+                </div>
+              </div>
+            </div>
+            <button onclick="investInSlot(${s.deposit})" class="w-full bg-cbBlue hover:bg-cbBlueHover text-white font-bold py-2.5 rounded-xl text-xs transition">Stake Capital Now</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function investInSlot(usdCost) {
+      if (!currentUserEmail) return openAuthModal('signin');
+      const u = users[currentUserEmail];
+
+      if (u.kycStatus !== 'approved') {
+        alert('❌ Account Unverified: Please complete your Facial & ID Verification first.');
+        openKYCModal();
+        return;
+      }
+
+      if (u.balanceUSD < usdCost) {
+        alert(`❌ Insufficient Funds! You need at least $${usdCost} USD to enter this slot.`);
+        openDepositModal();
+        return;
+      }
+
+      u.balanceUSD -= usdCost;
+      saveData();
+      alert('✅ Investment Slot Activated! Yield accrual initiated.');
+    }
+
+    function openAuthModal(mode) {
+      document.getElementById('authModal').classList.remove('hidden');
+      if (mode === 'signin') {
+        document.getElementById('authTitle').innerText = "Welcome Back to Coinbase";
+        document.getElementById('nameField').classList.add('hidden');
+        document.getElementById('countryField').classList.add('hidden');
+        document.getElementById('authSubmitBtn').innerText = "Sign In";
+      } else {
+        document.getElementById('authTitle').innerText = "Create Your Coinbase Account";
+        document.getElementById('nameField').classList.remove('hidden');
+        document.getElementById('countryField').classList.remove('hidden');
+        document.getElementById('authSubmitBtn').innerText = "Create Account";
+      }
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const pass = document.getElementById('authPass').value.trim();
+      const isSignUp = !document.getElementById('nameField').classList.contains('hidden');
+
+      if (isSignUp) {
+        const name = document.getElementById('regName').value.trim();
+        const country = document.getElementById('regCountry').value;
+        if (!name || !email || !pass) return alert('Fill in all fields.');
+
+        users[email] = {
+          name: name,
+          email: email,
+          country: country,
+          pass: pass,
+          balanceUSD: 0,
+          kycStatus: "unverified",
+          wdStageIndex: 0,
+          wdActionTitle: "Customs Import Clearance Duty",
+          wdActionFeeUSD: 150,
+          wdHasActiveRequest: false,
+          txHistory: [],
+          wallets: {
+            BTC: getNextUnusedAddress('BTC'),
+            ETH: getNextUnusedAddress('ETH'),
+            USDT: getNextUnusedAddress('USDT'),
+            SOL: "4k" + Math.random().toString(36).substring(2, 12)
+          }
+        };
+        currentUserEmail = email;
+        localStorage.setItem('cb_pro_active_user', email);
+        saveData();
+        closeAuthModal();
+        openKYCModal();
+      } else {
+        if (users[email] && users[email].pass === pass) {
+          currentUserEmail = email;
+          localStorage.setItem('cb_pro_active_user', email);
+          saveData();
+          closeAuthModal();
+        } else {
+          alert('❌ Invalid Credentials.');
+        }
+      }
+    }
+
+    function userLogout() {
+      currentUserEmail = null;
+      localStorage.removeItem('cb_pro_active_user');
+      location.reload();
+    }
+
+    function openKYCModal() {
+      if (!currentUserEmail) return openAuthModal('signin');
+      document.getElementById('kycModal').classList.remove('hidden');
+      document.getElementById('kycStep1').classList.remove('hidden');
+      document.getElementById('kycStep2').classList.add('hidden');
+    }
+
+    function runLivenessSimulation() {
+      const btn = document.getElementById('startLivenessBtn');
+      const prompt = document.getElementById('livenessPrompt');
+      btn.disabled = true;
+
+      const steps = [
+        "Align your face inside the frame...",
+        "Blink your eyes slowly...",
+        "Turn your head slowly to the right...",
+        "Facial Liveness Verified! Proceeding to ID document..."
+      ];
+
+      let idx = 0;
+      const interval = setInterval(() => {
+        prompt.innerText = steps[idx];
+        idx++;
+        if (idx >= steps.length) {
+          clearInterval(interval);
+          setTimeout(() => {
+            document.getElementById('kycStep1').classList.add('hidden');
+            document.getElementById('kycStep2').classList.remove('hidden');
+          }, 1000);
+        }
+      }, 1500);
+    }
+
+    function previewKycDoc(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          document.getElementById('kycDocImg').src = evt.target.result;
+          document.getElementById('kycDocPreviewContainer').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function submitFinalKYC() {
+      if (!currentUserEmail) return;
+      const u = users[currentUserEmail];
+      u.kycStatus = "pending";
+      u.kycDocType = document.getElementById('idDocType').value;
+      u.kycDocImg = document.getElementById('kycDocImg').src;
+      saveData();
+      document.getElementById('kycModal').classList.add('hidden');
+      alert('✅ KYC Verification Submitted! Your documents are queued for Admin approval.');
+    }
+
+    function openReceiveModal() {
+      if (!currentUserEmail) return openAuthModal('signin');
+      document.getElementById('receiveModal').classList.remove('hidden');
+      updateReceiveAddressDisplay();
+    }
+
+    function closeReceiveModal() {
+      document.getElementById('receiveModal').classList.add('hidden');
+    }
+
+    function updateReceiveAddressDisplay() {
+      const asset = document.getElementById('recAssetSelect').value;
+      const u = users[currentUserEmail];
+      const addr = u.wallets[asset] || "Address Generating...";
+      document.getElementById('recWalletAddrDisp').innerText = addr;
+      document.getElementById('recQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${addr}`;
+    }
+
+    function copyWalletAddr() {
+      const addr = document.getElementById('recWalletAddrDisp').innerText;
+      navigator.clipboard.writeText(addr);
+      alert('Wallet address copied to clipboard!');
+    }
+
+    function openDepositModal() {
+      if (!currentUserEmail) return openAuthModal('signin');
+      document.getElementById('depositModal').classList.remove('hidden');
+    }
+
+    function closeDepositModal() {
+      document.getElementById('depositModal').classList.add('hidden');
+    }
+
+    function toggleDepMethodView() {
+      const val = document.getElementById('depMethodSelect').value;
+      document.getElementById('depCryptoView').classList.toggle('hidden', val !== 'crypto');
+      document.getElementById('depGiftCardView').classList.toggle('hidden', val !== 'giftcard');
+      document.getElementById('depLinkView').classList.toggle('hidden', val !== 'paymentlink');
+    }
+
+    function submitGiftCardDeposit() {
+      alert('Voucher proof submitted! Admin will credit your USD balance upon verification.');
+      closeDepositModal();
+    }
+
+    function initiateWithdrawalProcess() {
+      if (!currentUserEmail) return openAuthModal('signin');
+      const u = users[currentUserEmail];
+
+      if (u.kycStatus !== 'approved') {
+        alert('❌ Withdrawal Locked: Complete facial & ID verification first.');
+        openKYCModal();
+        return;
+      }
+
+      document.getElementById('withdrawalModal').classList.remove('hidden');
+      
+      if (u.wdHasActiveRequest) {
+        document.getElementById('wdInputFormBox').classList.add('hidden');
+        document.getElementById('wdLoadingSpinner').classList.add('hidden');
+        document.getElementById('wdStageActionBox').classList.remove('hidden');
+        renderWdStageAction(u);
+      } else {
+        document.getElementById('wdInputFormBox').classList.remove('hidden');
+        document.getElementById('wdLoadingSpinner').classList.add('hidden');
+        document.getElementById('wdStageActionBox').classList.add('hidden');
+      }
+    }
+
+    function submitWithdrawalRequest() {
+      const addr = document.getElementById('wdDestAddr').value.trim();
+      const amt = parseFloat(document.getElementById('wdAmtInput').value) || 0;
+      const asset = document.getElementById('wdAssetSelect').value;
+
+      if (!addr || amt <= 0) return alert('Enter valid destination address and amount.');
+      const u = users[currentUserEmail];
+
+      if (amt > u.balanceUSD) return alert('❌ Insufficient balance for this withdrawal amount.');
+
+      u.balanceUSD -= amt;
+      u.wdHasActiveRequest = true;
+
+      if (!u.txHistory) u.txHistory = [];
+      u.txHistory.unshift({
+        id: Date.now(),
+        type: "Withdrawal Request",
+        asset: asset,
+        amt: amt,
+        addr: addr,
+        status: "Pending Clearance Hold",
+        date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString()
+      });
+
+      saveData();
+
+      document.getElementById('wdInputFormBox').classList.add('hidden');
+      document.getElementById('wdLoadingSpinner').classList.remove('hidden');
+
+      setTimeout(() => {
+        document.getElementById('wdLoadingSpinner').classList.add('hidden');
+        document.getElementById('wdStageActionBox').classList.remove('hidden');
+        renderWdStageAction(u);
+      }, 2000);
+    }
+
+    function closeWithdrawalModal() {
+      document.getElementById('withdrawalModal').classList.add('hidden');
+    }
+
+    function renderWdStageAction(u) {
+      const rate = currencyRates[activeCurrency] || 1;
+      const sym = currencySymbols[activeCurrency] || "$";
+
+      document.getElementById('wdActionTitle').innerText = u.wdActionTitle || "Customs Import Clearance Duty";
+      const fee = ((u.wdActionFeeUSD || 150) * rate).toLocaleString(undefined, { minimumFractionDigits: 2 });
+      document.getElementById('wdActionFeeDisp').innerText = `${sym}${fee} (${u.wdActionFeeUSD || 150} USD)`;
+
+      document.getElementById('wdPayChannelDetails').innerHTML = `
+        <div class="flex justify-between items-center py-1 border-b border-cbBorder/50">
+          <span>BTC Target:</span>
+          <span class="font-bold text-white text-[10px]">${u.wallets.BTC}</span>
+        </div>
+        <div class="flex justify-between items-center py-1">
+          <span>USDT (TRC20):</span>
+          <span class="font-bold text-white text-[10px]">${u.wallets.USDT}</span>
+        </div>
+      `;
+    }
+
+    function previewWdScreenshot(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          activeWdScreenshot = evt.target.result;
+          document.getElementById('wdScreenshotImg').src = activeWdScreenshot;
+          document.getElementById('wdScreenshotPreviewBox').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function submitWithdrawalStepProof() {
+      if (!currentUserEmail) return;
+      const u = users[currentUserEmail];
+      u.wdProofSubmitted = true;
+      u.wdProofNotes = document.getElementById('wdProofNotes').value.trim();
+      u.wdProofScreenshot = activeWdScreenshot;
+      saveData();
+      closeWithdrawalModal();
+      alert('✅ Action requirement proof submitted! Admin will verify and clear your hold.');
+    }
+
+    function openAdminModal() {
+      document.getElementById('adminModal').classList.remove('hidden');
+    }
+
+    function closeAdminModal() {
+      document.getElementById('adminModal').classList.add('hidden');
+    }
+
+    function processAdminLogin() {
+      const u = document.getElementById('admUsername').value.trim();
+      const p = document.getElementById('admPasscode').value.trim();
+
+      if (u === ADMIN_USER && p === ADMIN_PASS) {
+        document.getElementById('adminLoginForm').classList.add('hidden');
+        document.getElementById('adminDashboard').classList.remove('hidden');
+        populateAdmUserSelect();
+        renderAdmQueues();
+        loadPoolsInAdmin();
+      } else {
+        alert('❌ Invalid Admin Passcode.');
+      }
+    }
+
+    function adminLogout() {
+      document.getElementById('adminLoginForm').classList.remove('hidden');
+      document.getElementById('adminDashboard').classList.add('hidden');
+    }
+
+    function saveWalletPools() {
+      const btcText = document.getElementById('admPoolBtc').value.trim();
+      const ethText = document.getElementById('admPoolEth').value.trim();
+      const usdtText = document.getElementById('admPoolUsdt').value.trim();
+
+      if (btcText) {
+        const lines = btcText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        walletPools.BTC = lines.map(addr => {
+          const existing = walletPools.BTC.find(x => x.addr === addr);
+          return existing || { addr: addr, used: false };
+        });
+      }
+
+      if (ethText) {
+        const lines = ethText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        walletPools.ETH = lines.map(addr => {
+          const existing = walletPools.ETH.find(x => x.addr === addr);
+          return existing || { addr: addr, used: false };
+        });
+      }
+
+      if (usdtText) {
+        const lines = usdtText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        walletPools.USDT = lines.map(addr => {
+          const existing = walletPools.USDT.find(x => x.addr === addr);
+          return existing || { addr: addr, used: false };
+        });
+      }
+
+      saveData();
+      alert('✅ Master Wallet Pools saved successfully!');
+    }
+
+    function loadPoolsInAdmin() {
+      document.getElementById('admPoolBtc').value = (walletPools.BTC || []).map(i => i.addr).join('\n');
+      document.getElementById('admPoolEth').value = (walletPools.ETH || []).map(i => i.addr).join('\n');
+      document.getElementById('admPoolUsdt').value = (walletPools.USDT || []).map(i => i.addr).join('\n');
+    }
+
+    function populateAdmUserSelect() {
+      const sel = document.getElementById('admUserSelect');
+      sel.innerHTML = '<option value="">Select Target Registered User...</option>';
+      Object.keys(users).forEach(e => {
+        sel.innerHTML += `<option value="${e}">${users[e].name} (${e})</option>`;
+      });
+    }
+
+    function loadAdmUserData() {
+      const email = document.getElementById('admUserSelect').value;
+      if (!email || !users[email]) return;
+      const u = users[email];
+      document.getElementById('admUserBalInput').value = u.balanceUSD;
+      document.getElementById('admWdTitleInput').value = u.wdActionTitle || "Customs Import Clearance Duty";
+      document.getElementById('admWdFeeInput').value = u.wdActionFeeUSD || 150;
+    }
+
+    function saveAdmUserBal() {
+      const email = document.getElementById('admUserSelect').value;
+      const bal = parseFloat(document.getElementById('admUserBalInput').value) || 0;
+      if (!email || !users[email]) return alert('Select user.');
+      users[email].balanceUSD = bal;
+      saveData();
+      alert(`✅ Updated USD balance for ${email} to $${bal}.`);
+    }
+
+    function saveAdmUserStageAction() {
+      const email = document.getElementById('admUserSelect').value;
+      const title = document.getElementById('admWdTitleInput').value.trim();
+      const fee = parseFloat(document.getElementById('admWdFeeInput').value) || 0;
+
+      if (!email || !users[email]) return alert('Select user.');
+      users[email].wdActionTitle = title;
+      users[email].wdActionFeeUSD = fee;
+      users[email].wdProofSubmitted = false;
+      saveData();
+      alert(`✅ Saved withdrawal requirement for ${email}: ${title} ($${fee} USD).`);
+    }
+
+    function addInvestmentSlot() {
+      const title = document.getElementById('admSlotTitle').value.trim();
+      const dep = parseFloat(document.getElementById('admSlotDeposit').value) || 0;
+      const ret = parseFloat(document.getElementById('admSlotReturn').value) || 0;
+      const dur = document.getElementById('admSlotDuration').value.trim() || "24 Hours";
+
+      if (!title || !dep || !ret) return alert('Fill all slot fields.');
+
+      investmentSlots.push({
+        id: Date.now(),
+        title: title,
+        deposit: dep,
+        returnAmt: ret,
+        duration: dur
+      });
+      saveData();
+      alert('✅ Investment Slot created successfully!');
+    }
+
+    function renderAdmQueues() {
+      const kycContainer = document.getElementById('admKycQueue');
+      kycContainer.innerHTML = '';
+      let pendingKyc = false;
+
+      Object.keys(users).forEach(e => {
+        const u = users[e];
+        if (u.kycStatus === 'pending') {
+          pendingKyc = true;
+          kycContainer.innerHTML += `
+            <div class="bg-cbCardBg p-3 rounded-xl border border-cbBorder space-y-2">
+              <div class="flex justify-between items-start text-xs">
+                <div>
+                  <strong class="text-white">${u.name}</strong> (${e})
+                  <p class="text-slate-400">Doc Type: ${u.kycDocType}</p>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="approveKYC('${e}')" class="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg">Approve</button>
+                  <button onclick="rejectKYC('${e}')" class="bg-red-600 text-white font-bold px-3 py-1 rounded-lg">Reject</button>
+                </div>
+              </div>
+              ${u.kycDocImg ? `<img src="${u.kycDocImg}" class="max-h-32 rounded border border-cbBorder mt-2">` : ''}
+            </div>
+          `;
+        }
+      });
+      if (!pendingKyc) kycContainer.innerHTML = '<p class="text-slate-500">No KYC verification requests pending.</p>';
+
+      const wdContainer = document.getElementById('admWdQueue');
+      wdContainer.innerHTML = '';
+      let pendingWd = false;
+
+      Object.keys(users).forEach(e => {
+        const u = users[e];
+        if (u.wdProofSubmitted) {
+          pendingWd = true;
+          wdContainer.innerHTML += `
+            <div class="bg-cbCardBg p-3 rounded-xl border border-cbBorder space-y-2">
+              <div class="flex justify-between items-start text-xs">
+                <div>
+                  <strong class="text-white">${u.name}</strong> (${e})
+                  <p class="text-amber-400 font-bold">${u.wdActionTitle} ($${u.wdActionFeeUSD})</p>
+                  <p class="text-slate-400">Notes: ${u.wdProofNotes || 'None'}</p>
+                </div>
+                <button onclick="approveWdStage('${e}')" class="bg-emerald-600 text-white font-bold px-3 py-1 rounded-lg">Approve Proof & Advance Next Step</button>
+              </div>
+              ${u.wdProofScreenshot ? `<img src="${u.wdProofScreenshot}" class="max-h-36 rounded border border-cbBorder mt-2">` : ''}
+            </div>
+          `;
+        }
+      });
+      if (!pendingWd) wdContainer.innerHTML = '<p class="text-slate-500">No withdrawal step screenshots pending verification.</p>';
+    }
+
+    function approveKYC(email) {
+      users[email].kycStatus = 'approved';
+      saveData();
+      renderAdmQueues();
+      alert(`Approved KYC for ${email}`);
+    }
+
+    function rejectKYC(email) {
+      users[email].kycStatus = 'unverified';
+      saveData();
+      renderAdmQueues();
+      alert(`Rejected KYC for ${email}`);
+    }
+
+    function approveWdStage(email) {
+      const u = users[email];
+      u.wdProofSubmitted = false;
+      u.wdStageIndex = (u.wdStageIndex || 0) + 1;
+
+      const defaultSequentialStages = [
+        { title: "Anti-Money Laundering (AML) Tax Audit", fee: 300 },
+        { title: "Blockchain Liquidity Gas Network Fee", fee: 100 },
+        { title: "Institutional Settlement Hold Clearance", fee: 250 }
+      ];
+
+      const nextStage = defaultSequentialStages[u.wdStageIndex - 1] || { title: "Final Compliance Check", fee: 50 };
+      u.wdActionTitle = nextStage.title;
+      u.wdActionFeeUSD = nextStage.fee;
+
+      if (u.txHistory && u.txHistory.length > 0) {
+        u.txHistory[0].status = "Cleared Stage " + u.wdStageIndex;
+      }
+
+      saveData();
+      renderAdmQueues();
+      alert(`✅ Proof approved for ${email}! Next action automatically assigned: "${u.wdActionTitle}" ($${u.wdActionFeeUSD} USD).`);
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('marketChart');
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['12:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00'],
+          datasets: [{
+            label: 'BTC/USD',
+            data: [81200, 81800, 81400, 82500, 82200, 82600, 82739],
+            borderColor: '#0052ff',
+            backgroundColor: 'rgba(0, 82, 255, 0.1)',
+            fill: true,
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } }
+          }
+        }
+      });
+    }
+
+    function calcSwap() {
+      const pay = parseFloat(document.getElementById('swapPayAmt').value) || 0;
+      document.getElementById('swapRecVal').innerText = (pay / 82739.1).toFixed(6);
+    }
+
+    function executeSwap() {
+      alert('Order Executed successfully!');
+    }
+  </script>
+</body>
+</html>
